@@ -1,0 +1,23 @@
+{
+  "name": "placement-platform",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run start:dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "build": "npm run build -w packages/shared && npm run build -w apps/api && npm run build -w apps/web",
+    "lint": "npm run lint -w apps/api && npm run lint -w apps/web",
+    "db:migrate": "npm run prisma:migrate -w apps/api",
+    "db:seed": "npm run prisma:seed -w apps/api",
+    "db:generate": "npm run prisma:generate -w apps/api"
+  },
+  "devDependencies": {
+    "@next/swc-win32-x64-msvc": "^16.2.11",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.0"
+  }
+}

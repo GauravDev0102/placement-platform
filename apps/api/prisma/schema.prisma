@@ -1,0 +1,421 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OFFICER
+  RECRUITER
+  STUDENT
+}
+
+enum JobStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+}
+
+enum ApplicationStatus {
+  APPLIED
+  RESUME_SHORTLISTED
+  CODING_ROUND
+  TECHNICAL_INTERVIEW
+  HR_INTERVIEW
+  OFFER
+  JOINED
+  REJECTED
+}
+
+enum NotificationChannel {
+  EMAIL
+  IN_APP
+  TELEGRAM
+  WHATSAPP
+}
+
+enum ActivityEntityType {
+  USER
+  COMPANY
+  JOB
+  APPLICATION
+  RESUME
+  INTERVIEW
+  DRIVE
+  NOTE
+  TAG
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  password     String
+  name         String
+  role         Role     @default(STUDENT)
+  avatar       String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile       Profile?
+  resumes       Resume[]
+  projects      Project[]
+  experiences   Experience[]
+  userSkills    UserSkill[]
+  applications  Application[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+  recruiter     Recruiter?
+  candidateTags CandidateTag[] @relation("candidateTags")
+  addedTags     CandidateTag[] @relation("userAddedTags")
+  recruiterNotes Note[]        @relation("recruiterNotes")
+  studentNotes   Note[]        @relation("studentNotes")
+  activities    ActivityFeed[]
+  createdDrives PlacementDrive[]
+  savedSearches SavedSearch[]
+
+  @@map("users")
+}
+
+model Permission {
+  id    String @id @default(uuid())
+  name  String @unique
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  role         Role       @map("role")
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([role, permissionId])
+  @@map("role_permissions")
+}
+
+model Profile {
+  id             String  @id @default(uuid())
+  userId         String  @unique
+  phone          String?
+  linkedIn       String?
+  github         String?
+  cgpa           Float?
+  branch         String?
+  graduationYear Int?
+  backlogs       Int     @default(0)
+  bio            String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model Resume {
+  id         String   @id @default(uuid())
+  userId     String
+  fileUrl    String
+  parsedData Json?
+  atsScore   Int?
+  atsFeedback Json?
+  version     Int      @default(1)
+  uploadedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("resumes")
+}
+
+model Skill {
+  id   String @id @default(uuid())
+  name String @unique
+
+  users     UserSkill[]
+  jobSkills JobSkill[]
+
+  @@map("skills")
+}
+
+model UserSkill {
+  userId  String
+  skillId String
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill   Skill @relation(fields: [skillId], references: [id])
+
+  @@id([userId, skillId])
+  @@map("user_skills")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  description String?
+  techStack   String?
+  link        String?
+  startDate   DateTime?
+  endDate     DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("projects")
+}
+
+model Experience {
+  id          String   @id @default(uuid())
+  userId      String
+  company     String
+  role        String
+  startDate   DateTime
+  endDate     DateTime?
+  description String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("experiences")
+}
+
+model Department {
+  id   String @id @default(uuid())
+  name String @unique
+
+  @@map("departments")
+}
+
+model Company {
+  id          String   @id @default(uuid())
+  name        String
+  logo        String?
+  description String?
+  website     String?
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  recruiters Recruiter[]
+  jobs       Job[]
+  drives     PlacementDrive[]
+
+  @@map("companies")
+}
+
+model Recruiter {
+  id         String @id @default(uuid())
+  userId     String @unique
+  companyId  String
+  designation String?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("recruiters")
+}
+
+model Job {
+  id             String    @id @default(uuid())
+  companyId      String
+  title          String
+  description    String?
+  package        String?
+  minCGPA        Float?
+  maxBacklogs    Int?
+  allowedBranches String[]
+  deadline       DateTime?
+  status         JobStatus @default(DRAFT)
+  createdAt      DateTime  @default(now())
+
+  company      Company      @relation(fields: [companyId], references: [id])
+  jobSkills    JobSkill[]
+  applications Application[]
+
+  @@map("jobs")
+}
+
+model JobSkill {
+  jobId   String
+  skillId String
+  job     Job   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  skill   Skill @relation(fields: [skillId], references: [id])
+
+  @@id([jobId, skillId])
+  @@map("job_skills")
+}
+
+model PlacementDrive {
+  id        String   @id @default(uuid())
+  title     String
+  companyId String
+  stages    Json
+  startDate DateTime?
+  endDate   DateTime?
+  status    String   @default("UPCOMING")
+  createdBy String
+
+  company Company @relation(fields: [companyId], references: [id])
+  creator User    @relation(fields: [createdBy], references: [id])
+
+  @@map("placement_drives")
+}
+
+model Application {
+  id                 String             @id @default(uuid())
+  studentId          String
+  jobId              String
+  status             ApplicationStatus  @default(APPLIED)
+  eligibilityStatus  String?
+  eligibilityReason  String?
+  appliedAt          DateTime           @default(now())
+  currentStage       Int                @default(0)
+  currentStageName   String?
+
+  student      User             @relation(fields: [studentId], references: [id])
+  job          Job              @relation(fields: [jobId], references: [id])
+  interviews   Interview[]
+  stageDetails InterviewStage[]
+  notes        Note[]
+
+  @@unique([studentId, jobId])
+  @@map("applications")
+}
+
+model InterviewStage {
+  id            String             @id @default(uuid())
+  applicationId String
+  stageName     String
+  stageOrder    Int
+  status        ApplicationStatus
+  feedback      String?
+  scheduledAt   DateTime?
+  completedAt   DateTime?
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("interview_stages")
+}
+
+model Interview {
+  id               String   @id @default(uuid())
+  applicationId    String
+  stage            String
+  scheduledAt      DateTime?
+  interviewer      String?
+  meetLink         String?
+  calendarEventId  String?
+  result           String?
+  feedback         String?
+  createdAt        DateTime @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("interviews")
+}
+
+model Notification {
+  id        String             @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  message   String?
+  channel   NotificationChannel @default(IN_APP)
+  read      Boolean            @default(false)
+  sentAt    DateTime           @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  userEmail String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model Tag {
+  id        String        @id @default(uuid())
+  name      String
+  color     String        @default("#6366f1")
+  candidates CandidateTag[]
+
+  @@map("tags")
+}
+
+model CandidateTag {
+  candidateId String
+  tagId       String
+  addedBy     String
+
+  tag         Tag  @relation(fields: [tagId], references: [id])
+  addedByUser User @relation("userAddedTags", fields: [addedBy], references: [id])
+  candidate   User @relation("candidateTags", fields: [candidateId], references: [id])
+
+  @@id([candidateId, tagId])
+  @@map("candidate_tags")
+}
+
+model SavedSearch {
+  id          String   @id @default(uuid())
+  recruiterId String
+  name        String
+  filters     Json
+  createdAt   DateTime @default(now())
+
+  recruiter User @relation(fields: [recruiterId], references: [id])
+
+  @@map("saved_searches")
+}
+
+model EmailTemplate {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  subject   String
+  body      String
+  variables String[]
+  createdAt DateTime @default(now())
+
+  @@map("email_templates")
+}
+
+model Note {
+  id         String   @id @default(uuid())
+  recruiterId String
+  studentId  String
+  applicationId String?
+  content    String
+  createdAt  DateTime @default(now())
+
+  recruiter   User        @relation("recruiterNotes", fields: [recruiterId], references: [id])
+  student     User        @relation("studentNotes", fields: [studentId], references: [id])
+  application Application? @relation(fields: [applicationId], references: [id])
+
+  @@map("notes")
+}
+
+model ActivityFeed {
+  id          String             @id @default(uuid())
+  userId      String
+  action      String
+  description String
+  entityType  ActivityEntityType
+  entityId    String?
+  metadata    Json?
+  createdAt   DateTime           @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("activity_feed")
+}
