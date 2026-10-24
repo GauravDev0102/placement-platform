@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: placement-hub-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: apps/api
+    buildCommand: npx prisma generate && npm run build
+    startCommand: node dist/src/main.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION
+        value: 1h
+      - key: JWT_REFRESH_EXPIRATION
+        value: 7d
+      - key: PORT
+        value: 4000
+      - key: FRONTEND_URL
+        sync: false

@@ -21,6 +21,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ResumeParserModule } from './modules/resume-parser/resume-parser.module';
 import { EventsModule } from './modules/events/events.module';
 import { DrivesModule } from './modules/drives/drives.module';
+import { HealthController } from './common/health.controller';
 
 @Module({
   imports: [
@@ -47,5 +48,6 @@ import { DrivesModule } from './modules/drives/drives.module';
     EventsModule,
     DrivesModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}
