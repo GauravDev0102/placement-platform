@@ -16,7 +16,6 @@
     "db:generate": "npm run prisma:generate -w apps/api"
   },
   "devDependencies": {
-    "@next/swc-win32-x64-msvc": "^16.2.11",
     "concurrently": "^8.2.2",
     "typescript": "^5.4.0"
   }
